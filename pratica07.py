@@ -9,18 +9,31 @@
 import numpy as np
 import cv2 as cv
 
+
+def rastreiaRetangulo(tck_win, hsv, h_min, h_max, s_min, v_min):
+  mask = cv.inRange(hsv, np.array((h_min, s_min,v_min)), np.array((h_max,255.,255.)))
+  roi_hist = cv.calcHist([hsv],[0],mask,[180],[0,180])
+  cv.normalize(roi_hist,roi_hist,0,255,cv.NORM_MINMAX)
+
+  dst = cv.calcBackProject([hsv],[0],roi_hist,[0,180],1)
+
+  #applying camshift to get the new location
+  ret, tck_win = cv.CamShift(dst, tck_win, term_crit)
+  return (ret, tck_win)
+
 cap = cv.VideoCapture(0)
 cap.set(cv.CAP_PROP_SETTINGS, 1)
 
 __, frame = cap.read()
 
 height, width, channels = frame.shape
-tck_win = (0,0,height,width)
+tck_win1 = (0,0,height,width)
+tck_win2 = (0,0,height,width)
 
-h_min = 205/2.
-h_max = 220/2.
-s_min = 100.
-v_min = 50.
+h_min1 = 205/2.
+h_max1 = 220/2.
+s_min1 = 100.
+v_min1 = 50.
 
 h_min2 = 340/2.
 h_max2 = 355/2.
@@ -41,40 +54,20 @@ while(True):
   hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
 
   # Faz o tracking do quadrado azul
-  mask = cv.inRange(hsv, np.array((h_min, s_min,v_min)), np.array((h_max,255.,255.)))
-  roi_hist = cv.calcHist([hsv],[0],mask,[180],[0,180])
-  cv.normalize(roi_hist,roi_hist,0,255,cv.NORM_MINMAX)
-
-  frame_blue = cv.bitwise_and(frame, frame, mask=mask)
-  cv.imshow('Frame Blue',frame_blue)
-
-  dst = cv.calcBackProject([hsv],[0],roi_hist,[0,180],1)
-
-  #applying camshift to get the new location
-  ret, tck_win = cv.CamShift(dst, tck_win, term_crit)
-
+  ret1, tck_win1 = rastreiaRetangulo(tck_win1, hsv, h_min1, h_max1, s_min1, v_min1)
+  
   #drawing it on image
-  pts = cv.boxPoints(ret)
+  pts = cv.boxPoints(ret1)
   pts = np.int0(pts)
-  #frame = cv.polylines(frame,[pts],True, 255,2)
+  frame = cv.polylines(frame,[pts],True, 255,2)
 
   # Faz o tracking do quadrado vermelho
-  mask = cv.inRange(hsv, np.array((h_min2, s_min2,v_min2)), np.array((h_max2,255.,255.)))
-  roi_hist = cv.calcHist([hsv],[0],mask,[180],[0,180])
-  cv.normalize(roi_hist,roi_hist,0,255,cv.NORM_MINMAX)
-
-  frame_red = cv.bitwise_and(frame, frame, mask=mask)
-  cv.imshow('Frame Red',frame_red)
-
-  dst = cv.calcBackProject([hsv],[0],roi_hist,[0,180],1)
-
-  #applying camshift to get the new location
-  ret, tck_win = cv.CamShift(dst, tck_win, term_crit)
+  ret2, tck_win2 = rastreiaRetangulo(tck_win2, hsv, h_min2, h_max2, s_min2, v_min2)
 
   #drawing it on image
-  pts = cv.boxPoints(ret)
+  pts = cv.boxPoints(ret2)
   pts = np.int0(pts)
-  #frame = cv.polylines(frame,[pts],True, 255,2)
+  frame = cv.polylines(frame,[pts],True, 255,2)
 
   # Tranparência verde no primeiro quadrante
   frame[0:int(height/2), 0:int(width/2)] = frame[0:int(height/2), 0:int(width/2)] + [0, 20, 0]
