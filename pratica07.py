@@ -139,6 +139,8 @@ while(True):
     # Binariza o segundo quadrante
     frame_bin = cv.cvtColor(frame[0:int(height/2), int(width/2):width], cv.COLOR_BGR2GRAY)
     ret, frame_bin = cv.threshold(frame_bin,127,255,cv.THRESH_BINARY)
+    struct_elem = np.array([[1, 1, 1], [1, 1, 1], [1, 1, 1]], np.uint8)
+    frame_bin = cv.morphologyEx(frame_bin, cv.MORPH_CLOSE, struct_elem)
     frame_bin = np.stack((frame_bin, frame_bin, frame_bin), 2)
     frame[0:int(height/2), int(width/2):width] = frame_bin
 
