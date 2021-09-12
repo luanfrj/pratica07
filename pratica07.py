@@ -9,7 +9,7 @@
 import numpy as np
 import cv2 as cv
 
-debug = True
+debug = False
 
 def rastreiaRetangulo(tck_win, hsv, h_min, h_max, s_min, v_min):
   mask = cv.inRange(hsv, np.array((h_min, s_min,v_min)), np.array((h_max,255.,255.)))
@@ -91,16 +91,13 @@ v_min2 = 100.
 term_crit = ( cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10, 1 )
 
 while(True):
-  #capturing frame-by-frame
+
   ret, frame = cap.read()
 
-  #computing distribution tracked by camshift
-  #camshift looks for the center of mass of 
-  #this distribution
   hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
   hsv[:,:,0] = np.where(hsv[:,:,0] > 358/2, 0, hsv[:,:,0])
 
-  # Faz o tracking do quadrado verde
+  # Faz o tracking do objeto verde
   ret1, tck_win1 = rastreiaRetangulo(tck_win1, hsv, h_min1, h_max1, s_min1, v_min1)
   
   pts = cv.boxPoints(ret1)
@@ -111,7 +108,7 @@ while(True):
   if (debug):
     frame = cv.polylines(frame,[pts],True, 255,2)
 
-  # Faz o tracking do quadrado vermelho
+  # Faz o tracking do objeto vermelho
   ret2, tck_win2 = rastreiaRetangulo(tck_win2, hsv, h_min2, h_max2, s_min2, v_min2)
 
   pts = cv.boxPoints(ret2)
