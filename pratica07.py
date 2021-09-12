@@ -40,13 +40,13 @@ def detectaQuadrante(pt, width, height):
   y = pt[1]
   quadrante = 0
 
-  if (x < width/2) and (y < height/2):
+  if ((x > 0) and (x < width/2)) and ((y > 0) and (y < height/2)):
     quadrante = 1
-  if (x > width/2) and (y < height/2):
+  if ((x > width/2) and (x < width)) and ((y > 0) and (y < height/2)):
     quadrante = 2
-  if (x < width/2) and (y > height/2):
+  if ((x > 0) and (x < width/2)) and ((y > height/2) and (y < height)):
     quadrante = 3
-  if (x > width/2) and (y > height/2):
+  if ((x > width/2) and (x < width)) and ((y > height/2) and (y < height)):
     quadrante = 4
   return quadrante
 
@@ -88,24 +88,26 @@ while(True):
   # Faz o tracking do quadrado verde
   ret1, tck_win1 = rastreiaRetangulo(tck_win1, hsv, h_min1, h_max1, s_min1, v_min1)
   
-  #drawing it on image
   pts = cv.boxPoints(ret1)
   pts = np.int0(pts)
   cX, cY = calculaCentroBox(pts)
+  qverde = detectaQuadrante([cX, cY], width, height)
   if (debug):
     cv.circle(frame, (cX, cY), 7, (0, 255, 0), -1)
     frame = cv.polylines(frame,[pts],True, 255,2)
+    print("qverde:", qverde)
 
   # Faz o tracking do quadrado vermelho
   ret2, tck_win2 = rastreiaRetangulo(tck_win2, hsv, h_min2, h_max2, s_min2, v_min2)
 
-  #drawing it on image
   pts = cv.boxPoints(ret2)
   pts = np.int0(pts)
   cX, cY = calculaCentroBox(pts)
+  qvermelho = detectaQuadrante([cX, cY], width, height)
   if (debug):
     cv.circle(frame, (cX, cY), 7, (0, 0, 255), -1)
     frame = cv.polylines(frame,[pts],True, 255,2)
+    print("qvermelho:", qvermelho)
 
   # Tranparência verde no primeiro quadrante
   frame_q1 = frame[0:int(height/2), 0:int(width/2)].astype(np.float32) + [0, 45, 0]
