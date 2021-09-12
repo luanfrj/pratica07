@@ -9,6 +9,7 @@
 import numpy as np
 import cv2 as cv
 
+debug = True
 
 def rastreiaRetangulo(tck_win, hsv, h_min, h_max, s_min, v_min):
   mask = cv.inRange(hsv, np.array((h_min, s_min,v_min)), np.array((h_max,255.,255.)))
@@ -17,11 +18,40 @@ def rastreiaRetangulo(tck_win, hsv, h_min, h_max, s_min, v_min):
 
   dst = cv.calcBackProject([hsv],[0],roi_hist,[0,180],1)
 
+  if (debug):
+    frame_bgr = cv.cvtColor(hsv, cv.COLOR_HSV2BGR)
+    frame_bgr = cv.bitwise_and(frame_bgr, frame_bgr, mask=mask)
+    cv.imshow('Track' + str(h_min), frame_bgr)
+
   #applying camshift to get the new location
   ret, tck_win = cv.CamShift(dst, tck_win, term_crit)
   return (ret, tck_win)
 
-cap = cv.VideoCapture(0)
+def calculaCentroBox(pts):
+  sx = 0
+  sy = 0
+  for pt in pts:
+    sx = sx + pt[0]
+    sy = sy + pt[1]
+  return(int(sx/4), int(sy/4))
+
+def detectaQuadrante(pt, width, height):
+  x = pt[0]
+  y = pt[1]
+  quadrante = 0
+
+  if (x < width/2) and (y < height/2):
+    quadrante = 1
+  if (x > width/2) and (y < height/2):
+    quadrante = 2
+  if (x < width/2) and (y > height/2):
+    quadrante = 3
+  if (x > width/2) and (y > height/2):
+    quadrante = 4
+  return quadrante
+
+
+cap = cv.VideoCapture(1)
 cap.set(cv.CAP_PROP_SETTINGS, 1)
 
 __, frame = cap.read()
@@ -30,15 +60,17 @@ height, width, channels = frame.shape
 tck_win1 = (0,0,height,width)
 tck_win2 = (0,0,height,width)
 
-h_min1 = 205/2.
-h_max1 = 220/2.
+# Cor verde
+h_min1 = 105/2.
+h_max1 = 120/2.
 s_min1 = 100.
-v_min1 = 50.
+v_min1 = 100.
 
-h_min2 = 340/2.
-h_max2 = 355/2.
-s_min2 = 130.
-v_min2 = 50.
+# Cor vermelha
+h_min2 = 0/2.
+h_max2 = 1/2.
+s_min2 = 200.
+v_min2 = 100.
 
 #Setup the termination criteria, either 10 iteration
 #or move by at least 1 pt
@@ -53,13 +85,16 @@ while(True):
   #this distribution
   hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
 
-  # Faz o tracking do quadrado azul
+  # Faz o tracking do quadrado verde
   ret1, tck_win1 = rastreiaRetangulo(tck_win1, hsv, h_min1, h_max1, s_min1, v_min1)
   
   #drawing it on image
   pts = cv.boxPoints(ret1)
   pts = np.int0(pts)
-  frame = cv.polylines(frame,[pts],True, 255,2)
+  cX, cY = calculaCentroBox(pts)
+  if (debug):
+    cv.circle(frame, (cX, cY), 7, (0, 255, 0), -1)
+    frame = cv.polylines(frame,[pts],True, 255,2)
 
   # Faz o tracking do quadrado vermelho
   ret2, tck_win2 = rastreiaRetangulo(tck_win2, hsv, h_min2, h_max2, s_min2, v_min2)
@@ -67,10 +102,15 @@ while(True):
   #drawing it on image
   pts = cv.boxPoints(ret2)
   pts = np.int0(pts)
-  frame = cv.polylines(frame,[pts],True, 255,2)
+  cX, cY = calculaCentroBox(pts)
+  if (debug):
+    cv.circle(frame, (cX, cY), 7, (0, 0, 255), -1)
+    frame = cv.polylines(frame,[pts],True, 255,2)
 
   # Tranparência verde no primeiro quadrante
-  frame[0:int(height/2), 0:int(width/2)] = frame[0:int(height/2), 0:int(width/2)] + [0, 20, 0]
+  frame_q1 = frame[0:int(height/2), 0:int(width/2)].astype(np.float32) + [0, 45, 0]
+  frame_q1 = np.where(frame_q1 > 255, 255, frame_q1)
+  frame[0:int(height/2), 0:int(width/2)] = frame_q1.astype(np.uint8)
 
   # Binariza o segundo quadrante
   frame_bin = cv.cvtColor(frame[0:int(height/2), int(width/2):width], cv.COLOR_BGR2GRAY)
